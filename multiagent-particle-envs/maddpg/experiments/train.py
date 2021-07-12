@@ -125,6 +125,7 @@ def train(arglist):
                 agent_rewards[i][-1] += rew
 
             if done or terminal:
+                print(rew_n)
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
