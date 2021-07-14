@@ -105,7 +105,8 @@ def train(arglist):
         episode_step = 0
         train_step = 0
         t_start = time.time()
-
+        final_rewards = []
+        num_converge = 0
         print('Starting iterations...')
         while True:
             # get action
@@ -125,7 +126,10 @@ def train(arglist):
                 agent_rewards[i][-1] += rew
 
             if done or terminal:
-                print(rew_n)
+                #print(rew_n)
+                final_rewards.append(rew_n[0])
+                if rew_n[0] > -.5:
+                  num_converge += 1
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
@@ -180,6 +184,8 @@ def train(arglist):
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:
+                print("Average final reward: ", np.mean(final_rewards))
+                print("Convergence rate: ", (num_converge/arglist.num_episodes))
                 rew_file_name = arglist.plots_dir + arglist.exp_name + '_rewards.pkl'
                 with open(rew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_rewards, fp)
