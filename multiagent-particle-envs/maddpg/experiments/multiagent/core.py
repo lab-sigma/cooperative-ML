@@ -32,6 +32,8 @@ class Entity(object):
         self.size = 0.050
         # entity can move / be pushed
         self.movable = False
+        # entity hops about 1 unit at a time
+        self.hopper = False
         # entity collides with others
         self.collide = True
         # material density (affects mass)
@@ -97,6 +99,9 @@ class World(object):
         # contact response parameters
         self.contact_force = 1e+2
         self.contact_margin = 1e-3
+        
+        # Layne's limits
+        self.size = None
 
     # return all entities in the world
     @property
@@ -134,9 +139,23 @@ class World(object):
     def apply_action_force(self, p_force):
         # set applied forces
         for i,agent in enumerate(self.agents):
-            if agent.movable:
+            if agent.hopper:
+                p_force[i] = None
+                if agent.action.u[0] != 0:
+                    agent.state.p_pos[0] += (agent.action.u[0] / abs(agent.action.u[0]))
+                if agent.action.u[1] != 0:
+                    agent.state.p_pos[1] += (agent.action.u[1] / abs(agent.action.u[1]))
+                if agent.state.p_pos[0] > self.size:
+                    agent.state.p_pos[0] = self.size
+                elif agent.state.p_pos[0] < -self.size:
+                    agent.state.p_pos[0] = -self.size
+                elif agent.state.p_pos[1] > self.size:
+                    agent.state.p_pos[1] = self.size
+                elif agent.state.p_pos[1] < -self.size:
+                    agent.state.p_pos[1] = -self.size
+            elif agent.movable:
                 noise = np.random.randn(*agent.action.u.shape) * agent.u_noise if agent.u_noise else 0.0
-                p_force[i] = agent.action.u + noise                
+                p_force[i] = agent.action.u + noise    
         return p_force
 
     # gather physical forces acting on entities
@@ -158,6 +177,10 @@ class World(object):
     def integrate_state(self, p_force):
         for i,entity in enumerate(self.entities):
             if not entity.movable: continue
+            if entity.hopper: continue
+#             if entity.hopper: 
+#                 entity.state.p_pos += entity.action.u
+#                 continue
             entity.state.p_vel = entity.state.p_vel * (1 - self.damping)
             if (p_force[i] is not None):
                 entity.state.p_vel += (p_force[i] / entity.mass) * self.dt
@@ -167,6 +190,14 @@ class World(object):
                     entity.state.p_vel = entity.state.p_vel / np.sqrt(np.square(entity.state.p_vel[0]) +
                                                                   np.square(entity.state.p_vel[1])) * entity.max_speed
             entity.state.p_pos += entity.state.p_vel * self.dt
+#             if self.max_x != None and entity.state.p_pos[0] > self.max_x:
+#                 entity.state.p_pos[0] = self.max_x
+#             if self.min_x != None and entity.state.p_pos[0] < self.min_x:
+#                 entity.state.p_pos[0] = self.min_x
+#             if self.max_y != None and entity.state.p_pos[1] > self.max_y:
+#                 entity.state.p_pos[1] = self.max_y
+#             if self.min_y != None and entity.state.p_pos[1] < self.min_y:
+#                 entity.state.p_pos[1] = self.min_y
 
     def update_agent_state(self, agent):
         # set communication state (directly for now)
